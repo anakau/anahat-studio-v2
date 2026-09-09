@@ -69,11 +69,20 @@ a { color: inherit; text-decoration: none; }
   background: var(--bg); color: var(--ink);
   cursor: pointer;
 }
-#hero svg#scene {
+#hero svg#scene,
+#hero svg#scene-mobile {
   display: block;
   /* width/height are set in px by lily-pool.js (sizeScene), computed to
      exactly contain-fit #hero — CSS max-width/max-height on a raw inline
      <svg> proved unreliable for this across browsers. */
+}
+/* Below the breakpoint, the dedicated vertical 6-lily artwork replaces
+   the desktop scene entirely, rather than the old approach of cropping
+   the desktop scene's viewBox tighter to fake a bigger mobile view. */
+.lily-mobile-only { display: none; }
+@media (max-width: 860px) {
+  #hero svg#scene { display: none; }
+  .lily-mobile-only { display: block; }
 }
 /* Wheel decoder (dormant — kept for reuse elsewhere): circular disc window
    with the project thumbnail, its name arced around the top like the toy's

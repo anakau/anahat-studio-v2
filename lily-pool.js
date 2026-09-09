@@ -46,19 +46,18 @@
   const VIEWBOX_HEIGHT = 1600;
   const SCENE_ASPECT = 2650 / VIEWBOX_HEIGHT;
   const SCENE_MAX_WIDTH = 1400;
-  const DEFAULT_VIEWBOX = svg.getAttribute('viewBox');
 
-  // On phones the full 2650x1600 canvas contain-fits by width, leaving the
-  // pond noticeably small. Measured via getBBox() across all .lily groups:
-  // their combined extent is only ~81% of the canvas width and ~85% of its
-  // height (x 278–2428, y 150–1505) — the rest is background/margin no
-  // lily ever occupies. Swapping to that box (+60 units padding) as the
-  // viewBox zooms the same on-screen width in on just the lilies, ~23%
-  // bigger, without cropping any of them — nothing about their actual
-  // path data or position changes, only the visible window onto it.
+  // Below this width, index.html swaps in #scene-mobile — a dedicated
+  // vertical 6-lily artwork drawn for phone dimensions — instead of the
+  // desktop #scene (see .lily-mobile-only in style.css). Decided once at
+  // load rather than tracked across resizes/rotation, same as the rest of
+  // this file's mobile handling (isTouchDevice above).
   const MOBILE_BREAKPOINT = 860;
-  const MOBILE_VIEWBOX = '217.94 90 2270.44 1474.98';
-  const MOBILE_ASPECT = 2270.44 / 1474.98;
+  const isMobileScene = window.innerWidth <= MOBILE_BREAKPOINT;
+  const sceneMobile = document.getElementById('scene-mobile');
+  const activeScene = isMobileScene && sceneMobile ? sceneMobile : svg;
+  const MOBILE_VIEWBOX_HEIGHT = 852;
+  const MOBILE_ASPECT = 393 / MOBILE_VIEWBOX_HEIGHT;
 
   // CSS-only max-width/max-height sizing on a raw inline <svg> is unreliable
   // across engines: browsers were sizing by width first and letting the
@@ -67,9 +66,7 @@
   const hero = document.getElementById('hero');
   function sizeScene() {
     if (!hero) return;
-    const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
-    svg.setAttribute('viewBox', isMobile ? MOBILE_VIEWBOX : DEFAULT_VIEWBOX);
-    const aspect = isMobile ? MOBILE_ASPECT : SCENE_ASPECT;
+    const aspect = isMobileScene ? MOBILE_ASPECT : SCENE_ASPECT;
 
     const cs = getComputedStyle(hero);
     const availW = hero.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
@@ -80,8 +77,8 @@
       h = availH;
       w = h * aspect;
     }
-    svg.style.width = w + 'px';
-    svg.style.height = h + 'px';
+    activeScene.style.width = w + 'px';
+    activeScene.style.height = h + 'px';
   }
   sizeScene();
   window.addEventListener('resize', sizeScene);
@@ -202,6 +199,35 @@
   const STEM_TO_FLOWER = [2, 0, 1, 7, 5, 8, 3, 6, 4, 9];
   const ANCHOR_IDX = [0, 1, 12]; // well-separated, non-collinear master point indices
 
+  // --- mobile pool data: 6-lily vertical artwork (images/mobile_lily.svg),
+  //     same master flower shape at a different scale/rotation per instance
+  //     (verified all 6 share the master's exact 34-point path structure).
+  //     Stem-to-flower pairing found by nearest-neighbor: each stem's first
+  //     point sits right next to exactly one flower's center. Eye colors and
+  //     radii are pulled from the artist's own circles in that file (the
+  //     circles themselves are placeholders JS repositions — only their
+  //     fill/r carry through). */
+  const POOL_FLOWER_D_MOBILE = [
+    'M115.125 294.842L142.55 212.61L134.396 299.653L178.444 222.675C178.383 222.875 152.337 309.66 148.799 318.084C145.257 326.518 131.447 342.545 104.544 339.177C90.411 342.682 59.607 341.064 49.4559 306.555C39.305 272.046 28.2508 235.6 23.9924 221.69L68.683 295.629L66.5795 211.387L95.0284 293.612L107.731 208.057L115.125 294.842ZM104.475 309.539C95.1608 308.545 90.943 315.944 89.9986 319.767C92.8259 321.44 99.923 324.714 105.693 324.432C111.463 324.151 116.006 319.86 117.555 317.749C117.076 315.427 113.789 310.533 104.475 309.539Z',
+    'M289.425 333.917L259.707 252.485L270.296 339.266L224.109 263.552C224.182 263.773 252.643 349.773 256.415 358.094C260.192 366.425 274.445 382.058 301.244 377.938C315.469 381.046 346.215 378.565 355.395 343.785C364.575 309.006 374.605 272.264 378.472 258.24L335.871 333.403L335.613 249.135L309.478 332.124L294.384 246.959L289.425 333.917ZM300.484 348.308C309.767 347.054 314.19 354.331 315.241 358.126C312.462 359.877 305.46 363.349 299.684 363.229C293.908 363.109 289.247 358.947 287.639 356.881C288.053 354.546 291.202 349.562 300.484 348.308Z',
+    'M220.202 379.19L236.773 317.085L234.684 381.878L263.796 322.907C263.757 323.071 248.416 388.471 246.18 394.866C243.94 401.269 234.445 413.756 214.38 412.482C204.079 415.717 181.207 415.916 172.13 390.835C163.053 365.754 153.22 339.279 149.438 329.177L185.865 381.878L180.49 319.622L205.273 379.19L210.797 315.293L220.202 379.19ZM212.986 390.549C206.048 390.235 203.262 395.903 202.736 398.775C204.905 399.885 210.306 401.987 214.563 401.517C218.821 401.046 221.989 397.665 223.04 396.033C222.58 394.336 219.925 390.862 212.986 390.549Z',
+    'M79.7942 459.163L52.9635 385.643L62.5238 463.992L20.8241 395.634C20.8323 395.658 46.5812 473.47 49.9907 480.99C53.4009 488.513 66.27 502.626 90.4648 498.906C103.308 501.712 131.067 499.473 139.356 468.073C147.644 436.672 156.698 403.5 160.189 390.838L121.727 458.699L121.495 382.618L97.8987 457.544L84.2715 380.653L79.7942 459.163ZM89.779 472.156C98.1599 471.024 102.153 477.594 103.102 481.021C100.592 482.602 94.2703 485.736 89.056 485.628C83.8417 485.519 79.6343 481.762 78.182 479.896C78.5558 477.788 81.3982 473.289 89.779 472.156Z',
+    'M300.845 486.979L321.021 411.36L318.477 490.25L353.923 418.45C353.877 418.647 335.196 498.278 332.473 506.064C329.746 513.86 318.186 529.064 293.756 527.514C281.213 531.452 253.365 531.694 242.313 501.156C231.262 470.618 219.289 438.384 214.684 426.084L259.037 490.25L252.493 414.451L282.667 486.979L289.393 409.18L300.845 486.979ZM292.056 500.81C283.608 500.428 280.215 507.328 279.575 510.825C282.215 512.176 288.792 514.735 293.977 514.163C299.16 513.591 303.017 509.474 304.297 507.486C303.737 505.42 300.504 501.191 292.056 500.81Z',
+    'M177.774 543.057L150.943 469.537L160.503 547.887L118.804 479.528C118.831 479.611 144.562 557.365 147.971 564.884C151.381 572.406 164.25 586.52 188.445 582.8C201.289 585.606 229.047 583.368 237.335 551.967C245.623 520.567 254.678 487.394 258.17 474.733L219.707 542.594L219.474 466.512L195.879 541.439L182.252 464.548L177.774 543.057ZM187.758 556.05C196.139 554.917 200.133 561.487 201.082 564.914C198.573 566.495 192.25 569.631 187.035 569.522C181.821 569.414 177.613 565.655 176.161 563.79C176.535 561.682 179.378 557.182 187.758 556.05Z',
+  ];
+  const POOL_STEM_D_MOBILE = [
+    'M301.616 371.396C301.458 374.673 300.725 383.715 299.572 397.882C298.628 409.472 297.771 430.055 298.319 445.526C298.867 460.997 301.054 470.746 303.527 478.861C306 486.977 308.694 493.163 315.878 504.086C323.061 515.01 334.653 530.483 340.994 539.098C348.208 548.9 349.499 552.112 351.597 559.795C355.88 575.473 357.445 587.425 357.333 590.266C357.15 594.941 348.599 603.265 340.652 609.723C334.235 614.939 320.635 618.485 310.986 625.977C296.861 636.945 288.659 647.273 285.655 652.202C278.443 664.033 279.438 671.161 279.135 679.161C278.988 683.042 280.525 686.74 282.755 690.156C287.257 697.053 297.801 700.635 309.718 704.833C316.225 707.125 325.372 712.641 335.454 719.507C348.961 728.706 355.133 739.757 356.719 744.314C359.753 753.031 356.091 763.358 352.512 767.348C348.587 771.723 338.276 771.023 329.536 774.251C323.819 776.363 315.598 779.709 302.265 783.114C288.931 786.519 270.758 789.951 259.734 791.682C248.71 793.413 245.385 793.338 225.958 787.801C206.531 782.264 171.102 771.266 152.37 765.488C132.695 759.419 130.36 758.332 126.255 754.986C118.956 749.037 114.508 743.943 112.277 739.345C107.045 728.566 103.451 720.101 101.949 714.578C101.097 710.136 100.064 702.367 99.5321 694.369C99 686.372 99 678.381 99 670.149',
+    'M213.223 405.482C213.223 405.595 213.223 416.009 214.971 441.271C216.007 456.244 220.216 475.323 222.851 487.783C225.487 500.244 227.156 505.441 230.106 513.609C233.057 521.776 237.237 532.757 240.364 545.106C243.491 557.454 245.438 570.838 246.478 578.223C247.656 586.579 249.491 595.385 252.86 608.326C254.86 616.008 259.075 621.009 268.935 632.364C276.431 640.997 289.769 654.762 299.824 664.221C315.663 679.121 324.235 683.202 327.017 683.552C337.683 684.892 348.993 677.824 353.33 674.982C354.374 674.414 360.5 666 359 658.5C357.419 650.594 356 645 353.5 637.5',
+    'M290.031 522.055C290.102 524.714 290.545 531.305 293.723 546.814C295.459 555.283 296.784 569.267 297.811 576.943C298.977 585.656 299.484 587.717 300.085 591.61C300.528 594.482 301.361 599.157 302.026 617.317C302.691 635.477 303.191 666.976 303.125 684.86C303.047 706.071 301.066 711.397 299.503 715.355C296.53 722.881 288.624 730.795 281.737 736.367C279.923 737.835 276.341 738.727 262.404 739.501C248.468 740.274 223.986 740.429 207.171 741.301C190.355 742.172 181.947 743.756 172.423 746.324C162.899 748.892 152.513 752.396 144.106 755.835C135.699 759.273 129.585 762.541 121.437 767.034C113.289 771.527 103.293 777.146 95.6357 780.949C75.8036 790.797 66.625 790.091 61.3741 787.983C57.7086 786.511 56.2717 783.171 55.5865 781.548C53.5615 776.753 56.036 765.662 60.7673 755.219C62.3031 751.829 68.2837 745.51 77.2729 735.865C88.9603 723.325 98.0935 721.577 107.059 719.995C111.095 719.284 118.063 719.576 132.33 722.428C146.597 725.28 168.01 731.175 184.324 736.666C200.638 742.157 211.205 747.065 222.676 754.018C234.148 760.971 246.204 769.82 259.891 778.951C273.577 788.082 288.528 797.227 303.123 804.566C317.718 811.904 331.504 817.159 346.632 822.961',
+    'M188.553 581.539C188.553 581.65 188.553 581.761 188.619 589.365C188.684 596.969 188.814 612.064 189.245 622.576C189.901 638.592 191.153 646.57 192.29 655.042C194.452 671.137 199.086 683.116 201.851 687.744C205.293 693.504 212.621 699.644 225.359 709.322C233.652 715.623 246.63 723.414 253.591 727.978C263.395 734.406 266.166 739.664 267.985 746.938C269.236 751.936 268.707 766.905 269.107 785.454C269.25 792.094 268.725 793.108 268.149 794.086C263.526 801.935 250.761 809.2 237.008 810.294C226.438 811.136 206.175 810.657 194.931 810.612C182.041 810.56 173.461 806.932 162.363 801.831C156.703 799.23 154.758 797.05 152.182 791.384C146.475 778.834 144.171 769.178 143.817 767.401C143.367 765.145 143.357 755.093 143.62 740.68C143.767 732.651 147.2 720.19 151.423 704.47C154.624 692.85 157.8 682.462 160.27 676.065C160.853 674.678 161.294 673.922 162.179 672.77',
+    'M92.2942 490.5C92.054 491.755 96 513.428 96 521C96 525 95.0265 540.296 86.7547 544C70.3486 551.346 56.0582 552.24 48.5 557.5C43.1076 561.253 37.5 570 41.5 577.5C42.8413 580.015 54.1484 582.357 55 582.61C58 583.5 64.2732 584.296 84.3328 584.299C96.6499 584.301 102.523 583.025 107.386 582.61C125.626 581.051 137.418 581.461 139.062 582.504C146.419 587.171 150.661 599.407 151.58 601.933C153.466 607.12 144.185 614.072 140.179 617.01C139.137 617.775 137.644 618.199 126.963 620.646C116.283 623.093 96.3559 627.384 84.8652 630.122C73.3744 632.861 70.9233 633.917 66.0647 636.987C45.1838 650.179 42.5314 654.892 39.945 661.476C37.3962 667.963 37.3423 679.593 37.3816 690.933C37.4125 699.84 43.8718 705.804 50.5846 713.398C55.5513 719.016 64.6063 727.37 70.8016 732.893C79.9464 741.045 84.3109 743.896 85.0756 745.753C86.9819 750.385 85.3838 758.827 86.7547 762.583C89.5574 770.263 102.947 778.989 106.595 782.42C109.628 784.985 113.112 786.233 119.205 788.489C124.157 790.424 132.882 793.961 141.872 797.605',
+    'M105.461 334.59C105.513 337.428 106.016 345.125 110.002 361.998C123.94 421 202.002 425.5 174.246 456.26C147.278 486.147 209.099 541.332 220.257 567.09C226.5 581.5 230 591 232.5 599C233.929 603.573 237.756 611.972 239.5 622C241.5 633.5 241.44 637.312 240.39 646C239 657.5 239.435 660.561 233.5 667.5C230.225 671.329 221.252 673.484 220 673.5C217.24 673.535 211.836 674.302 201.5 668.439C195.538 665.057 187.952 658.414 181.5 652.5C175.5 647 168.231 636.853 160.5 633.5C152.769 630.147 144.384 626.196 130.492 621.771C116.601 617.346 109.587 611.032 98.5019 608C83.6375 603.935 73.1767 609.683 70.0794 610.417C62.9018 612.117 61.8321 617.491 56.9748 633.5C54.1027 642.966 56.9425 655.859 56.9767 657.997C57.0998 665.695 65.9948 671.629 70.2294 675.954C72.5825 678.357 76.0113 683.091 87.3067 688.544C98.602 693.997 117.452 700.213 130.492 704.05C143.533 707.887 150.193 709.156 158.466 710.121C176.372 712.209 189.712 712.983 195.244 713.951C207.032 716.016 224.641 706.766 230.626 702.975C233.038 701.489 236.623 699.379 240.39 696.97C244.156 694.561 247.995 691.918 252.564 688.967',
+  ];
+  const FLOWER_FILL_MOBILE = ['#FF56C1', '#FF1EAC', '#FF9EDC', '#FF1EAC', '#FF56C1', '#FF1EAC'];
+  const EYE_COLOR_MOBILE = ['#52DAFF', '#BD9615', '#158D4D', '#52DAFF', '#0D6D87', '#52DAFF'];
+  const EYE_R_MOBILE = [7.04671, 7.04671, 5.22524, 6.36207, 6.36207, 6.36207];
+  const STEM_TO_FLOWER_MOBILE = [1, 2, 4, 5, 3, 0];
+
   function catmullRomToBezierPath(points) {
     if (points.length < 2) return '';
     let d = `M${points[0].x.toFixed(2)},${points[0].y.toFixed(2)}`;
@@ -219,26 +245,31 @@
     return d;
   }
 
-  function initLily(i) {
+  const STEM_COLOR_BY_FLOWER = { '#FF1EAC': '#0C9A18', '#FF56C1': '#0ACE16', '#FF9EDC': '#7CE885' };
+
+  // Parameterized so the same math drives both the desktop 10-lily scene
+  // and the mobile 6-lily scene — only the DOM id suffix, pool data, and
+  // the openness fallback's viewbox height differ between them.
+  function initLily(pool, i) {
     const flowerIdx = i;
-    const stemIdx = STEM_TO_FLOWER.indexOf(flowerIdx);
+    const stemIdx = pool.stemToFlower.indexOf(flowerIdx);
+    const suffix = pool.idSuffix + flowerIdx;
 
-    const eyeGroup = document.getElementById('eyeGroup' + flowerIdx);
-    const eyeWhite = document.getElementById('eyeWhite' + flowerIdx);
-    const eyePupil = document.getElementById('eyePupil' + flowerIdx);
-    const stemPath = document.getElementById('stemPath' + flowerIdx);
-    const flowerPath = document.getElementById('flowerPath' + flowerIdx);
+    const eyeGroup = document.getElementById('eyeGroup' + suffix);
+    const eyeWhite = document.getElementById('eyeWhite' + suffix);
+    const eyePupil = document.getElementById('eyePupil' + suffix);
+    const stemPath = document.getElementById('stemPath' + suffix);
+    const flowerPath = document.getElementById('flowerPath' + suffix);
 
-    flowerPath.setAttribute('fill', FLOWER_FILL[flowerIdx]);
-    eyeWhite.setAttribute('fill', EYE_COLOR[flowerIdx]);
-    const rScale = EYE_R[flowerIdx] / 17.5;
+    flowerPath.setAttribute('fill', pool.flowerFill[flowerIdx]);
+    eyeWhite.setAttribute('fill', pool.eyeColor[flowerIdx]);
+    const rScale = pool.eyeR[flowerIdx] / 17.5;
     eyeWhite.setAttribute('r', 17.5 * rScale);
     eyePupil.setAttribute('r', 10 * rScale);
 
-    const STEM_COLOR_BY_FLOWER = { '#FF1EAC': '#0C9A18', '#FF56C1': '#0ACE16', '#FF9EDC': '#7CE885' };
-    stemPath.setAttribute('stroke', STEM_COLOR_BY_FLOWER[FLOWER_FILL[flowerIdx]] || '#0ACE16');
+    stemPath.setAttribute('stroke', STEM_COLOR_BY_FLOWER[pool.flowerFill[flowerIdx]] || '#0ACE16');
 
-    const instPairs = numsFromD(POOL_FLOWER_D[flowerIdx]);
+    const instPairs = numsFromD(pool.flowerD[flowerIdx]);
     const mp = ANCHOR_IDX.map(k => MASTER_PAIRS_OPEN[k]);
     const ip = ANCHOR_IDX.map(k => instPairs[k]);
     const M = solveAffine(mp, ip);
@@ -251,7 +282,7 @@
     const instPupilClosed = applyAffine(M, PUPIL_CLOSED);
     const instFlowerCenter = applyAffine(M, FLOWER_CENTER_LOCAL);
 
-    stemPath.setAttribute('d', POOL_STEM_D[stemIdx]);
+    stemPath.setAttribute('d', pool.stemD[stemIdx]);
     const SAMPLE_COUNT = 42;
     const totalLen = stemPath.getTotalLength();
     let basePoints = [];
@@ -295,7 +326,7 @@
       // catches up to that target. Proximity (distance to this flower) still
       // shapes eye-follow strength and stem wiggle energy below.
       const HEIGHT_SENSITIVITY = 8;
-      const heightFactor = mouse.active ? clamp(0.5 + (0.5 - (mouse.y - VIEWBOX_Y_MIN) / VIEWBOX_HEIGHT) * HEIGHT_SENSITIVITY, 0, 1) : 0.5;
+      const heightFactor = mouse.active ? clamp(0.5 + (0.5 - (mouse.y - VIEWBOX_Y_MIN) / pool.viewboxHeight) * HEIGHT_SENSITIVITY, 0, 1) : 0.5;
       const targetOpenness = clamp((tiltOpenness !== null ? tiltOpenness : heightFactor) + idleBreath, 0, 1);
       openness += (targetOpenness - openness) * 0.28;
 
@@ -335,13 +366,24 @@
     return { update };
   }
 
+  const DESKTOP_POOL = {
+    idSuffix: '', flowerFill: FLOWER_FILL, flowerD: POOL_FLOWER_D, stemD: POOL_STEM_D,
+    eyeColor: EYE_COLOR, eyeR: EYE_R, stemToFlower: STEM_TO_FLOWER, viewboxHeight: VIEWBOX_HEIGHT,
+  };
+  const MOBILE_POOL = {
+    idSuffix: 'M', flowerFill: FLOWER_FILL_MOBILE, flowerD: POOL_FLOWER_D_MOBILE, stemD: POOL_STEM_D_MOBILE,
+    eyeColor: EYE_COLOR_MOBILE, eyeR: EYE_R_MOBILE, stemToFlower: STEM_TO_FLOWER_MOBILE, viewboxHeight: MOBILE_VIEWBOX_HEIGHT,
+  };
+  const activePool = isMobileScene ? MOBILE_POOL : DESKTOP_POOL;
+  const activeSceneWidth = isMobileScene ? 393 : 2650;
+
   const lilies = [];
-  for (let i = 0; i < POOL_FLOWER_D.length; i++) lilies.push(initLily(i));
+  for (let i = 0; i < activePool.flowerD.length; i++) lilies.push(initLily(activePool, i));
 
   function toSvgCoords(clientX, clientY) {
-    const rect = svg.getBoundingClientRect();
-    const scaleX = 2650 / rect.width;
-    const scaleY = VIEWBOX_HEIGHT / rect.height;
+    const rect = activeScene.getBoundingClientRect();
+    const scaleX = activeSceneWidth / rect.width;
+    const scaleY = activePool.viewboxHeight / rect.height;
     return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY + VIEWBOX_Y_MIN };
   }
 
