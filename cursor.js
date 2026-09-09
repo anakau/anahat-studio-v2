@@ -1,11 +1,9 @@
 // ── SPARKLE CURSOR TRAIL (ported from anahat.studio) ──
 (function () {
-  document.addEventListener('mousemove', function (e) {
+  function spawnTrail(x, y) {
     const trail = document.createElement('div');
     trail.className = 'cursor-trail-plus';
 
-    const x = e.clientX;
-    const y = e.clientY;
     const driftX = (Math.random() - 0.5) * 10;
     const driftY = 90;
 
@@ -34,5 +32,18 @@
     document.documentElement.appendChild(trail);
 
     setTimeout(() => trail.remove(), 2500);
+  }
+
+  document.addEventListener('mousemove', function (e) {
+    spawnTrail(e.clientX, e.clientY);
   });
+
+  // Touch devices don't fire mousemove during a drag (only a synthetic one
+  // on tap) — touchmove is what actually fires continuously as a finger
+  // moves, so the trail needs its own listener here to follow a drag.
+  document.addEventListener('touchmove', function (e) {
+    const touch = e.touches[0];
+    if (!touch) return;
+    spawnTrail(touch.clientX, touch.clientY);
+  }, { passive: true });
 })();
