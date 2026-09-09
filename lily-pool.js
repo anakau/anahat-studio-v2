@@ -3,6 +3,42 @@
   if (!svg) return;
   const MAX_DIST = 380;
   const EYE_TRAVEL = 9;
+
+  // --- touch devices: tilt drives open/close instead of touch height ---
+  // DeviceOrientationEvent's `beta` is front-to-back tilt in degrees: ~0
+  // when the phone lies flat with the screen facing up (the sky), ~90 when
+  // held upright facing the user — mapping directly onto openness (0
+  // closed, 1 open) with no inversion needed. This only overrides the
+  // openness input; touch position still drives eye-tracking and stem
+  // wiggle via `mouse` further down.
+  const isTouchDevice = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  let tiltOpenness = null; // null = not active yet, falls back to touch height
+
+  function handleOrientation(e) {
+    if (e.beta === null || e.beta === undefined) return;
+    tiltOpenness = Math.max(0, Math.min(1, e.beta / 90));
+  }
+
+  if (isTouchDevice && typeof DeviceOrientationEvent !== 'undefined') {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      // iOS 13+ gates motion sensors behind an explicit user gesture.
+      const prompt = document.createElement('button');
+      prompt.textContent = 'Tap to enable tilt';
+      prompt.className = 'tilt-permission-prompt';
+      document.body.appendChild(prompt);
+      prompt.addEventListener('click', () => {
+        DeviceOrientationEvent.requestPermission()
+          .then((state) => {
+            if (state === 'granted') window.addEventListener('deviceorientation', handleOrientation);
+          })
+          .catch(() => {});
+        prompt.remove();
+      }, { once: true });
+    } else {
+      // Android/other browsers: no explicit permission step.
+      window.addEventListener('deviceorientation', handleOrientation);
+    }
+  }
   // Matches the <svg id="scene"> viewBox in index.html (cropped tight to the
   // artwork's actual y-extent, so there's no dead space baked into the
   // coordinate system).
@@ -260,7 +296,7 @@
       // shapes eye-follow strength and stem wiggle energy below.
       const HEIGHT_SENSITIVITY = 8;
       const heightFactor = mouse.active ? clamp(0.5 + (0.5 - (mouse.y - VIEWBOX_Y_MIN) / VIEWBOX_HEIGHT) * HEIGHT_SENSITIVITY, 0, 1) : 0.5;
-      const targetOpenness = clamp(heightFactor + idleBreath, 0, 1);
+      const targetOpenness = clamp((tiltOpenness !== null ? tiltOpenness : heightFactor) + idleBreath, 0, 1);
       openness += (targetOpenness - openness) * 0.28;
 
       const flowerNow = lerpPairs(instClosedPairs, instOpenPairs, openness);
