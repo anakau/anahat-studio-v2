@@ -10,6 +10,19 @@
   const VIEWBOX_HEIGHT = 1600;
   const SCENE_ASPECT = 2650 / VIEWBOX_HEIGHT;
   const SCENE_MAX_WIDTH = 1400;
+  const DEFAULT_VIEWBOX = svg.getAttribute('viewBox');
+
+  // On phones the full 2650x1600 canvas contain-fits by width, leaving the
+  // pond noticeably small. Measured via getBBox() across all .lily groups:
+  // their combined extent is only ~81% of the canvas width and ~85% of its
+  // height (x 278–2428, y 150–1505) — the rest is background/margin no
+  // lily ever occupies. Swapping to that box (+60 units padding) as the
+  // viewBox zooms the same on-screen width in on just the lilies, ~23%
+  // bigger, without cropping any of them — nothing about their actual
+  // path data or position changes, only the visible window onto it.
+  const MOBILE_BREAKPOINT = 860;
+  const MOBILE_VIEWBOX = '217.94 90 2270.44 1474.98';
+  const MOBILE_ASPECT = 2270.44 / 1474.98;
 
   // CSS-only max-width/max-height sizing on a raw inline <svg> is unreliable
   // across engines: browsers were sizing by width first and letting the
@@ -18,14 +31,18 @@
   const hero = document.getElementById('hero');
   function sizeScene() {
     if (!hero) return;
+    const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+    svg.setAttribute('viewBox', isMobile ? MOBILE_VIEWBOX : DEFAULT_VIEWBOX);
+    const aspect = isMobile ? MOBILE_ASPECT : SCENE_ASPECT;
+
     const cs = getComputedStyle(hero);
     const availW = hero.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     const availH = hero.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
     let w = Math.min(availW, SCENE_MAX_WIDTH);
-    let h = w / SCENE_ASPECT;
+    let h = w / aspect;
     if (h > availH) {
       h = availH;
-      w = h * SCENE_ASPECT;
+      w = h * aspect;
     }
     svg.style.width = w + 'px';
     svg.style.height = h + 'px';

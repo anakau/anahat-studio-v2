@@ -381,6 +381,12 @@ a { color: inherit; text-decoration: none; }
   .wheel-btn--prev { left: -8px; }
   .wheel-btn--next { right: -8px; }
   #site-header { padding: 20px 20px 16px; }
+  /* Fixed height:62.4px (from the desktop rule) renders the logo's wide
+     3039:432 mark at ~439px, wider than the available content width on
+     phones — it was cropping against the header's side padding. Fluid
+     width instead, capped so it doesn't get oversized on the larger
+     phones/small tablets at the top of this breakpoint. */
+  .logo-mark { height: auto; width: min(260px, 68vw); }
   #work { padding: 0 16px 80px; }
   .project-card { padding: 28px 16px 24px; }
   .project-card:not(:first-child) { margin-top: -20px; }
