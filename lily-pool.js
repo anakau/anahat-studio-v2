@@ -16,7 +16,9 @@
 
   function handleOrientation(e) {
     if (e.beta === null || e.beta === undefined) return;
-    tiltOpenness = Math.max(0, Math.min(1, e.beta / 90));
+    // Divide by less than the full 90deg upright-to-flat range so a
+    // smaller, more comfortable tilt swings fully from closed to open.
+    tiltOpenness = Math.max(0, Math.min(1, e.beta / 55));
   }
 
   if (isTouchDevice && typeof DeviceOrientationEvent !== 'undefined') {
@@ -56,8 +58,20 @@
   const isMobileScene = window.innerWidth <= MOBILE_BREAKPOINT;
   const sceneMobile = document.getElementById('scene-mobile');
   const activeScene = isMobileScene && sceneMobile ? sceneMobile : svg;
-  const MOBILE_VIEWBOX_HEIGHT = 852;
-  const MOBILE_ASPECT = 393 / MOBILE_VIEWBOX_HEIGHT;
+
+  // The raw artwork's 393x852 canvas has real dead space around the lilies
+  // (measured via getBBox() across all .lily groups: x 36-361, y 208-819 —
+  // only ~83%/72% of the canvas). Cropping the viewBox to that box +30
+  // units of padding zooms in on just the lilies — bigger, but still with
+  // a clean margin — without touching any lily's actual path data.
+  const MOBILE_VIEWBOX_X = 6;
+  const MOBILE_VIEWBOX_Y = 178;
+  const MOBILE_VIEWBOX_W = 385;
+  const MOBILE_VIEWBOX_H = 675;
+  if (sceneMobile) {
+    sceneMobile.setAttribute('viewBox', `${MOBILE_VIEWBOX_X} ${MOBILE_VIEWBOX_Y} ${MOBILE_VIEWBOX_W} ${MOBILE_VIEWBOX_H}`);
+  }
+  const MOBILE_ASPECT = MOBILE_VIEWBOX_W / MOBILE_VIEWBOX_H;
 
   // CSS-only max-width/max-height sizing on a raw inline <svg> is unreliable
   // across engines: browsers were sizing by width first and letting the
@@ -326,7 +340,7 @@
       // catches up to that target. Proximity (distance to this flower) still
       // shapes eye-follow strength and stem wiggle energy below.
       const HEIGHT_SENSITIVITY = 8;
-      const heightFactor = mouse.active ? clamp(0.5 + (0.5 - (mouse.y - VIEWBOX_Y_MIN) / pool.viewboxHeight) * HEIGHT_SENSITIVITY, 0, 1) : 0.5;
+      const heightFactor = mouse.active ? clamp(0.5 + (0.5 - (mouse.y - pool.viewboxYMin) / pool.viewboxHeight) * HEIGHT_SENSITIVITY, 0, 1) : 0.5;
       const targetOpenness = clamp((tiltOpenness !== null ? tiltOpenness : heightFactor) + idleBreath, 0, 1);
       openness += (targetOpenness - openness) * 0.28;
 
@@ -368,23 +382,32 @@
 
   const DESKTOP_POOL = {
     idSuffix: '', flowerFill: FLOWER_FILL, flowerD: POOL_FLOWER_D, stemD: POOL_STEM_D,
-    eyeColor: EYE_COLOR, eyeR: EYE_R, stemToFlower: STEM_TO_FLOWER, viewboxHeight: VIEWBOX_HEIGHT,
+    eyeColor: EYE_COLOR, eyeR: EYE_R, stemToFlower: STEM_TO_FLOWER,
+    viewboxXMin: 0, viewboxYMin: VIEWBOX_Y_MIN, viewboxWidth: 2650, viewboxHeight: VIEWBOX_HEIGHT,
   };
   const MOBILE_POOL = {
     idSuffix: 'M', flowerFill: FLOWER_FILL_MOBILE, flowerD: POOL_FLOWER_D_MOBILE, stemD: POOL_STEM_D_MOBILE,
-    eyeColor: EYE_COLOR_MOBILE, eyeR: EYE_R_MOBILE, stemToFlower: STEM_TO_FLOWER_MOBILE, viewboxHeight: MOBILE_VIEWBOX_HEIGHT,
+    eyeColor: EYE_COLOR_MOBILE, eyeR: EYE_R_MOBILE, stemToFlower: STEM_TO_FLOWER_MOBILE,
+    viewboxXMin: MOBILE_VIEWBOX_X, viewboxYMin: MOBILE_VIEWBOX_Y, viewboxWidth: MOBILE_VIEWBOX_W, viewboxHeight: MOBILE_VIEWBOX_H,
   };
   const activePool = isMobileScene ? MOBILE_POOL : DESKTOP_POOL;
-  const activeSceneWidth = isMobileScene ? 393 : 2650;
 
   const lilies = [];
   for (let i = 0; i < activePool.flowerD.length; i++) lilies.push(initLily(activePool, i));
 
+  // Coordinates returned here are in the SAME absolute space as the pool's
+  // own path data (e.g. mobile flower/stem `d` values run ~6-819, not
+  // 0-675) — the viewBox's origin offset has to be added back in, not just
+  // its width/height used for scale, or proximity/eye-tracking would be
+  // comparing against the wrong origin entirely.
   function toSvgCoords(clientX, clientY) {
     const rect = activeScene.getBoundingClientRect();
-    const scaleX = activeSceneWidth / rect.width;
+    const scaleX = activePool.viewboxWidth / rect.width;
     const scaleY = activePool.viewboxHeight / rect.height;
-    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY + VIEWBOX_Y_MIN };
+    return {
+      x: (clientX - rect.left) * scaleX + activePool.viewboxXMin,
+      y: (clientY - rect.top) * scaleY + activePool.viewboxYMin,
+    };
   }
 
   let mouse = { x: 0, y: 0, active: false, down: false };
