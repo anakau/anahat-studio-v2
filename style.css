@@ -42,7 +42,8 @@ a { color: inherit; text-decoration: none; }
 .logo-mark { display: block; height: 62.4px; width: auto; color: var(--ink); }
 .site-nav { display: flex; gap: 28px; }
 .site-nav a {
-  font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
+  font-family: 'Belgrano', serif;
+  font-size: 12px; font-weight: 400; letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--ink); text-decoration: none;
   transition: color 0.15s ease;
 }
@@ -361,10 +362,13 @@ a { color: inherit; text-decoration: none; }
   padding: 40px;
 }
 .practice-placeholder {
-  font-size: clamp(28px, 4vw, 48px); font-weight: 600;
+  font-family: 'Belgrano', serif;
+  font-size: clamp(28px, 4vw, 48px); font-weight: 400;
   color: #0D2818; background: #4ADE80;
-  padding: 32px 56px; border-radius: 32px;
-  text-align: center;
+  width: min(720px, 90%); min-height: 280px;
+  display: flex; align-items: center; justify-content: flex-start;
+  padding: 40px 56px; border-radius: 32px;
+  text-align: left;
 }
 
 /* ── ARCHIVE ── */
