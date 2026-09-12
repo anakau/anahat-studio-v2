@@ -287,10 +287,11 @@
     const rScale = pool.eyeR[flowerIdx] / 17.5;
     eyeWhite.setAttribute('r', 17.5 * rScale);
     eyePupil.setAttribute('r', 10 * rScale);
-    // Plain white base sitting behind eyeWhite, a bit larger, so the eye
-    // reads clearly against the flower fill even when eyeColor is a dark
-    // or low-contrast shade (olive, brown) that would otherwise blend in.
-    eyeCutout.setAttribute('r', 17.5 * rScale * 1.35);
+    // Plain white base sitting behind eyeWhite, 5x the size — large enough
+    // to read as a white patch on the face, not just a thin ring, so the
+    // eye stays clearly visible regardless of eyeColor's contrast against
+    // the flower fill.
+    eyeCutout.setAttribute('r', 17.5 * rScale * 5);
 
     stemPath.setAttribute('stroke', STEM_COLOR_BY_FLOWER[pool.flowerFill[flowerIdx]] || '#0ACE16');
 
