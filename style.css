@@ -354,6 +354,13 @@ a { color: inherit; text-decoration: none; }
 }
 .about-cv-btn:hover { background: #EE8AB2; }
 
+/* ── PRACTICE ── */
+#practice-page {
+  min-height: 40vh; display: flex; align-items: center; justify-content: center;
+  padding: 40px;
+}
+.practice-placeholder { font-size: clamp(18px, 2vw, 24px); color: var(--muted); }
+
 /* ── ARCHIVE ── */
 /* Plain, uniform list of every project — no huge titles or overlapping
    cards. Practice will hold the curated, fully-designed pages over time;
