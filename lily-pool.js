@@ -44,7 +44,13 @@
   // Matches the <svg id="scene"> viewBox in index.html (cropped tight to the
   // artwork's actual y-extent, so there's no dead space baked into the
   // coordinate system).
-  const VIEWBOX_Y_MIN = 0;
+  // Shifted from 0: the artwork's own content (y 150-1505, measured via
+  // getBBox()) isn't centered in a plain 0-1600 box — there's 150 units of
+  // empty space above it and only 95 below, so the flowers visibly sat
+  // above center even though the <svg> element itself is centered in
+  // #hero. +27.5 balances that (content center 827.5, minus half the
+  // 1600 viewBox height) without changing the zoom/size at all.
+  const VIEWBOX_Y_MIN = 27.5;
   const VIEWBOX_HEIGHT = 1600;
   const SCENE_ASPECT = 2650 / VIEWBOX_HEIGHT;
   const SCENE_MAX_WIDTH = 1400;
@@ -270,6 +276,7 @@
     const suffix = pool.idSuffix + flowerIdx;
 
     const eyeGroup = document.getElementById('eyeGroup' + suffix);
+    const eyeCutout = document.getElementById('eyeCutout' + suffix);
     const eyeWhite = document.getElementById('eyeWhite' + suffix);
     const eyePupil = document.getElementById('eyePupil' + suffix);
     const stemPath = document.getElementById('stemPath' + suffix);
@@ -280,6 +287,10 @@
     const rScale = pool.eyeR[flowerIdx] / 17.5;
     eyeWhite.setAttribute('r', 17.5 * rScale);
     eyePupil.setAttribute('r', 10 * rScale);
+    // Plain white base sitting behind eyeWhite, a bit larger, so the eye
+    // reads clearly against the flower fill even when eyeColor is a dark
+    // or low-contrast shade (olive, brown) that would otherwise blend in.
+    eyeCutout.setAttribute('r', 17.5 * rScale * 1.35);
 
     stemPath.setAttribute('stroke', STEM_COLOR_BY_FLOWER[pool.flowerFill[flowerIdx]] || '#0ACE16');
 
@@ -351,6 +362,8 @@
       const baseEyeY = lerp(instEyeClosed.y, instEyeOpen.y, openness);
       const basePupilX = lerp(instPupilClosed.x, instPupilOpen.x, openness);
       const basePupilY = lerp(instPupilClosed.y, instPupilOpen.y, openness);
+      eyeCutout.setAttribute('cx', baseEyeX);
+      eyeCutout.setAttribute('cy', baseEyeY);
       eyeWhite.setAttribute('cx', baseEyeX);
       eyeWhite.setAttribute('cy', baseEyeY);
       eyePupil.setAttribute('cx', basePupilX);

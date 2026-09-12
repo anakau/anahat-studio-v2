@@ -83,6 +83,9 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 860px) {
   #hero svg#scene { display: none; }
   .lily-mobile-only { display: block; }
+  /* Push the scene toward the bottom of #hero instead of dead-center —
+     opens up breathing room between the logo/header and the lilies. */
+  #hero { align-items: flex-end; }
 }
 /* Wheel decoder (dormant — kept for reuse elsewhere): circular disc window
    with the project thumbnail, its name arced around the top like the toy's
