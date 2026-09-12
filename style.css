@@ -46,11 +46,12 @@ a { color: inherit; text-decoration: none; }
   color: var(--ink); text-decoration: none;
   transition: color 0.15s ease;
 }
-/* Magenta from the lily flower fill (FLOWER_FILL in lily-pool.js), not a
-   generic accent — same select-state color whether it's a hover preview
-   or the current page's persistent indicator. */
+/* The homepage logo's green (html.theme-green's --ink, #4ADE80) — used as
+   a fixed reference color here since these nav pages don't carry that
+   theme class themselves. Same select-state color whether it's a hover
+   preview or the current page's persistent indicator. */
 .site-nav a:hover,
-.site-nav a.is-current { color: #FF1EAC; }
+.site-nav a.is-current { color: #4ADE80; }
 
 /* ── HERO ── */
 #hero {
@@ -359,7 +360,12 @@ a { color: inherit; text-decoration: none; }
   min-height: 40vh; display: flex; align-items: center; justify-content: center;
   padding: 40px;
 }
-.practice-placeholder { font-size: clamp(18px, 2vw, 24px); color: var(--muted); }
+.practice-placeholder {
+  font-size: clamp(28px, 4vw, 48px); font-weight: 600;
+  color: #0D2818; background: #4ADE80;
+  padding: 32px 56px; border-radius: 32px;
+  text-align: center;
+}
 
 /* ── ARCHIVE ── */
 /* Plain, uniform list of every project — no huge titles or overlapping
