@@ -26,9 +26,8 @@ function renderArchive() {
     return `
       <div class="archive-row">
         <span class="archive-name">${nameContent}</span>
-        <span class="archive-year">${p.year || ''}</span>
-        <span class="archive-category">${p.category || ''}</span>
         <span class="archive-tags">${tags}</span>
+        <span class="archive-year">${p.year || ''}</span>
       </div>
     `;
   }).join('');
