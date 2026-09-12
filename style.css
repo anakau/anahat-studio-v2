@@ -44,8 +44,13 @@ a { color: inherit; text-decoration: none; }
 .site-nav a {
   font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--ink); text-decoration: none;
+  transition: color 0.15s ease;
 }
-.site-nav a:hover { text-decoration: underline; }
+/* Magenta from the lily flower fill (FLOWER_FILL in lily-pool.js), not a
+   generic accent — same select-state color whether it's a hover preview
+   or the current page's persistent indicator. */
+.site-nav a:hover,
+.site-nav a.is-current { color: #FF1EAC; }
 
 /* ── HERO ── */
 #hero {
@@ -348,6 +353,31 @@ a { color: inherit; text-decoration: none; }
   transition: background 0.15s;
 }
 .about-cv-btn:hover { background: #EE8AB2; }
+
+/* ── ARCHIVE ── */
+/* Plain, uniform list of every project — no huge titles or overlapping
+   cards. Practice will hold the curated, fully-designed pages over time;
+   this is just the complete record in the meantime. */
+#archive-page { max-width: 900px; margin: 0 auto; padding: 40px 40px 100px; }
+.archive-intro {
+  font-weight: 400; font-size: clamp(16px, 1.6vw, 19px);
+  line-height: 1.5; color: var(--muted); margin-bottom: 40px; max-width: 680px;
+}
+.archive-row {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px;
+  padding: 16px 0; border-top: 1px solid var(--line);
+}
+.archive-row:last-child { border-bottom: 1px solid var(--line); }
+.archive-name { font-size: 16px; font-weight: 600; flex: 1 1 240px; }
+.archive-year {
+  font-family: ui-monospace, monospace; font-size: 13px; color: var(--muted);
+  flex: 0 0 auto;
+}
+.archive-category { font-size: 13px; color: var(--muted); flex: 0 0 auto; }
+.archive-tags { font-size: 13px; color: var(--muted); flex: 1 1 100%; }
+@media (max-width: 640px) {
+  .archive-tags { order: 4; }
+}
 
 /* ── FOOTER ── */
 #site-footer {
